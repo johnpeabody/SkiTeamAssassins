@@ -91,6 +91,46 @@ function killParticipant() {
   updateUI();
 }
 
+document.getElementById("file-input").addEventListener("change", handleFileUpload);
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    loadFromCSV(text);
+  };
+  reader.readAsText(file);
+}
+
+function loadFromCSV(csvText) {
+  const rows = csvText.trim().split("\n").slice(1); // skip header
+  const newParticipants = [];
+
+  for (const row of rows) {
+    const [first, last, targetName] = row.split(",");
+
+    newParticipants.push({
+      first: first.trim(),
+      last: last.trim(),
+      targetName: targetName.trim()
+    });
+  }
+
+  // Link targets by first name
+  newParticipants.forEach(p => {
+    const target = newParticipants.find(t => `${t.first} ${t.last}` === p.targetName);
+    p.target = target ? target.first : null;
+    delete p.targetName; // clean up
+  });
+
+  participants = newParticipants;
+  updateUI();
+}
+
+
 // Initialize game
 createKillChain();
 updateUI();
