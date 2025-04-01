@@ -1,56 +1,122 @@
-// Initial list of participants (mocked as if read from your CSV)
-let participants = [
-  { first: "Alice", last: "Smith" },
-  { first: "Bob", last: "Jones" },
-  { first: "Charlie", last: "Brown" },
-  { first: "Dana", last: "White" },
-  { first: "Eli", last: "Green" },
-];
+let participants = [];
 
-// Shuffle the participants and assign targets in a circular chain
-function createKillChain() {
-  for (let i = participants.length - 1; i > 0; i--) {
+// 📥 Load CSV from file input
+document.getElementById("file-input").addEventListener("change", handleFileUpload);
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+
+    if (text.includes("TargetEmail")) {
+      loadFromSavedCSV(text); // Resuming a saved game
+    } else {
+      loadFromRawCSV(text); // Starting a new game
+    }
+  };
+  reader.readAsText(file);
+}
+
+// 🆕 Load raw CSV and assign kill chain
+function loadFromRawCSV(csvText) {
+  const rows = csvText.trim().split("\n");
+  const header = rows[0].split(",");
+  const firstIdx = header.indexOf("First Name");
+  const lastIdx = header.indexOf("Last Name");
+  const emailIdx = header.indexOf("Email");
+  const phoneIdx = header.indexOf("Phone Number");
+
+  const newParticipants = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const cols = rows[i].split(",");
+    newParticipants.push({
+      first: cols[firstIdx].trim(),
+      last: cols[lastIdx].trim(),
+      email: cols[emailIdx].trim(),
+      phone: cols[phoneIdx].trim(),
+      target: null
+    });
+  }
+
+  // Shuffle and assign targets
+  for (let i = newParticipants.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [participants[i], participants[j]] = [participants[j], participants[i]];
+    [newParticipants[i], newParticipants[j]] = [newParticipants[j], newParticipants[i]];
+  }
+  for (let i = 0; i < newParticipants.length; i++) {
+    newParticipants[i].target = newParticipants[(i + 1) % newParticipants.length].email;
   }
 
-  // Assign targets in a circular loop
-  for (let i = 0; i < participants.length; i++) {
-    participants[i].target = participants[(i + 1) % participants.length].first;
+  participants = newParticipants;
+  updateUI();
+}
+
+// 🔁 Load saved state with target assignments
+function loadFromSavedCSV(csvText) {
+  const rows = csvText.trim().split("\n");
+  const header = rows[0].split(",");
+  const firstIdx = header.indexOf("First");
+  const lastIdx = header.indexOf("Last");
+  const emailIdx = header.indexOf("Email");
+  const targetIdx = header.indexOf("TargetEmail");
+
+  const tempParticipants = [];
+  const emailMap = {};
+
+  for (let i = 1; i < rows.length; i++) {
+    const cols = rows[i].split(",");
+    const p = {
+      first: cols[firstIdx].trim(),
+      last: cols[lastIdx].trim(),
+      email: cols[emailIdx].trim(),
+      target: cols[targetIdx].trim()
+    };
+    tempParticipants.push(p);
+    emailMap[p.email] = p;
   }
+
+  participants = tempParticipants;
+  updateUI();
 }
 
-// Render the current state
-function updateUI() {
-  const select = document.getElementById("kill-select");
-  const chainDisplay = document.getElementById("kill-chain");
-  const countDisplay = document.getElementById("remaining-count");
+// 🔪 Kill a participant by first name
+function killParticipant() {
+  const selectedName = document.getElementById("kill-select").value;
+  const victimIndex = participants.findIndex(p => p.first === selectedName);
 
-  // Clear dropdown
-  select.innerHTML = "";
-  participants.forEach(p => {
-    const option = document.createElement("option");
-    option.value = p.first;
-    option.textContent = `${p.first} ${p.last}`;
-    select.appendChild(option);
-  });
+  if (victimIndex === -1) {
+    alert("Participant not found.");
+    return;
+  }
 
-  // Update remaining count
-  countDisplay.textContent = participants.length;
+  const victim = participants[victimIndex];
+  const assassinIndex = (victimIndex - 1 + participants.length) % participants.length;
+  const assassin = participants[assassinIndex];
 
-  // Update kill chain text
-  let chain = participants.map(p => p.first).join(" -> ");
-  if (participants.length > 1) chain += " -> " + participants[0].first;
-  chainDisplay.textContent = chain;
+  // Reassign target
+  assassin.target = victim.target;
+
+  // Remove victim
+  participants.splice(victimIndex, 1);
+
+  // Check for winner
+  if (participants.length === 1) {
+    alert(`${participants[0].first} is the winner!`);
+  }
+
+  updateUI();
 }
 
+// 💾 Download current state to CSV
 function downloadCSV() {
-  let csvContent = "data:text/csv;charset=utf-8,First,Last,Target\n";
+  let csvContent = "data:text/csv;charset=utf-8,First,Last,Email,Phone,TargetEmail\n";
 
   participants.forEach(p => {
-    const target = participants.find(t => t.first === p.target);
-    const targetName = target ? target.first + " " + target.last : "";
-    csvContent += `${p.first},${p.last},${targetName}\n`;
+    csvContent += `${p.first},${p.last},${p.email},${p.phone},${p.target}\n`;
   });
 
   const encodedUri = encodeURI(csvContent);
@@ -62,75 +128,23 @@ function downloadCSV() {
   document.body.removeChild(link);
 }
 
-// Simulate a kill
-function killParticipant() {
-  const selectedName = document.getElementById("kill-select").value;
-  const victimIndex = participants.findIndex(p => p.first === selectedName);
+// 🔁 Update UI elements
+function updateUI() {
+  const select = document.getElementById("kill-select");
+  const chainDisplay = document.getElementById("kill-chain");
+  const countDisplay = document.getElementById("remaining-count");
 
-  if (victimIndex === -1) {
-    alert("Participant not found.");
-    return;
-  }
-
-  // Find the assassin (the person targeting the victim)
-  const victim = participants[victimIndex];
-  const assassinIndex = (victimIndex - 1 + participants.length) % participants.length;
-  const assassin = participants[assassinIndex];
-
-  // Assassin now targets the victim's target
-  assassin.target = victim.target;
-
-  // Remove the victim
-  participants.splice(victimIndex, 1);
-
-  // If only one remains, declare winner
-  if (participants.length === 1) {
-    alert(`${participants[0].first} is the winner!`);
-  }
-
-  updateUI();
-}
-
-document.getElementById("file-input").addEventListener("change", handleFileUpload);
-
-function handleFileUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const text = e.target.result;
-    loadFromCSV(text);
-  };
-  reader.readAsText(file);
-}
-
-function loadFromCSV(csvText) {
-  const rows = csvText.trim().split("\n").slice(1); // skip header
-  const newParticipants = [];
-
-  for (const row of rows) {
-    const [first, last, targetName] = row.split(",");
-
-    newParticipants.push({
-      first: first.trim(),
-      last: last.trim(),
-      targetName: targetName.trim()
-    });
-  }
-
-  // Link targets by first name
-  newParticipants.forEach(p => {
-    const target = newParticipants.find(t => `${t.first} ${t.last}` === p.targetName);
-    p.target = target ? target.first : null;
-    delete p.targetName; // clean up
+  select.innerHTML = "";
+  participants.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.first;
+    option.textContent = `${p.first} ${p.last}`;
+    select.appendChild(option);
   });
 
-  participants = newParticipants;
-  updateUI();
+  countDisplay.textContent = participants.length;
+
+  let chainText = participants.map(p => p.first).join(" -> ");
+  if (participants.length > 1) chainText += " -> " + participants[0].first;
+  chainDisplay.textContent = chainText;
 }
-
-
-// Initialize game
-createKillChain();
-updateUI();
