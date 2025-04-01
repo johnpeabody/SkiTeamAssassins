@@ -137,14 +137,16 @@ function updateUI() {
   select.innerHTML = "";
   participants.forEach(p => {
     const option = document.createElement("option");
-    option.value = p.first;
-    option.textContent = `${p.first} ${p.last}`;
+    option.value = p.first; // still uses first name to identify
+    option.textContent = `${p.first} ${p.last}`; // shows full name
     select.appendChild(option);
   });
 
   countDisplay.textContent = participants.length;
 
-  let chainText = participants.map(p => p.first).join(" -> ");
-  if (participants.length > 1) chainText += " -> " + participants[0].first;
+  // Show full names in kill chain
+  let chainText = participants.map(p => `${p.first} ${p.last}`).join(" -> ");
+  if (participants.length > 1) chainText += " -> " + `${participants[0].first} ${participants[0].last}`;
   chainDisplay.textContent = chainText;
 }
+
