@@ -1,5 +1,12 @@
 let participants = [];
 
+// 🕒 This matches the comment timestamp above
+const lastUpdated = "2025-04-01 320 PM";
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("version-info").textContent = lastUpdated;
+});
+
 document.getElementById("file-input").addEventListener("change", handleFileUpload);
 
 function handleFileUpload(event) {
