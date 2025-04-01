@@ -12,9 +12,9 @@ function handleFileUpload(event) {
     const text = e.target.result;
 
     if (text.includes("TargetEmail")) {
-      loadFromSavedCSV(text); // Resuming a saved game
+      loadFromSavedCSV(text); // resume game
     } else {
-      loadFromRawCSV(text); // Starting a new game
+      loadFromRawCSV(text); // start new game
     }
   };
   reader.readAsText(file);
@@ -23,21 +23,15 @@ function handleFileUpload(event) {
 // 🆕 Load raw CSV and assign kill chain
 function loadFromRawCSV(csvText) {
   const rows = csvText.trim().split("\n");
-  const header = rows[0].split(",");
-  const firstIdx = header.indexOf("First Name");
-  const lastIdx = header.indexOf("Last Name");
-  const emailIdx = header.indexOf("Email");
-  const phoneIdx = header.indexOf("Phone Number");
-
   const newParticipants = [];
 
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i].split(",");
     newParticipants.push({
-      first: cols[firstIdx].trim(),
-      last: cols[lastIdx].trim(),
-      email: cols[emailIdx].trim(),
-      phone: cols[phoneIdx].trim(),
+      first: cols[1].trim(),         // First Name
+      last: cols[2].trim(),          // Last Name
+      email: cols[3].trim(),         // Email
+      phone: cols[4].trim(),         // Phone Number
       target: null
     });
   }
@@ -55,28 +49,21 @@ function loadFromRawCSV(csvText) {
   updateUI();
 }
 
-// 🔁 Load saved state with target assignments
+// 🔁 Load saved state with assigned targets
 function loadFromSavedCSV(csvText) {
   const rows = csvText.trim().split("\n");
-  const header = rows[0].split(",");
-  const firstIdx = header.indexOf("First");
-  const lastIdx = header.indexOf("Last");
-  const emailIdx = header.indexOf("Email");
-  const targetIdx = header.indexOf("TargetEmail");
-
   const tempParticipants = [];
-  const emailMap = {};
 
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i].split(",");
     const p = {
-      first: cols[firstIdx].trim(),
-      last: cols[lastIdx].trim(),
-      email: cols[emailIdx].trim(),
-      target: cols[targetIdx].trim()
+      first: cols[0].trim(),          // First
+      last: cols[1].trim(),           // Last
+      email: cols[2].trim(),          // Email
+      phone: cols[3].trim(),          // Phone
+      target: cols[4].trim()          // TargetEmail
     };
     tempParticipants.push(p);
-    emailMap[p.email] = p;
   }
 
   participants = tempParticipants;
@@ -97,13 +84,10 @@ function killParticipant() {
   const assassinIndex = (victimIndex - 1 + participants.length) % participants.length;
   const assassin = participants[assassinIndex];
 
-  // Reassign target
   assassin.target = victim.target;
 
-  // Remove victim
   participants.splice(victimIndex, 1);
 
-  // Check for winner
   if (participants.length === 1) {
     alert(`${participants[0].first} is the winner!`);
   }
@@ -111,7 +95,7 @@ function killParticipant() {
   updateUI();
 }
 
-// 💾 Download current state to CSV
+// 💾 Save current state as downloadable CSV
 function downloadCSV() {
   let csvContent = "data:text/csv;charset=utf-8,First,Last,Email,Phone,TargetEmail\n";
 
@@ -128,7 +112,7 @@ function downloadCSV() {
   document.body.removeChild(link);
 }
 
-// 🔁 Update UI elements
+// 🔁 UI Updates
 function updateUI() {
   const select = document.getElementById("kill-select");
   const chainDisplay = document.getElementById("kill-chain");
@@ -137,16 +121,14 @@ function updateUI() {
   select.innerHTML = "";
   participants.forEach(p => {
     const option = document.createElement("option");
-    option.value = p.first; // still uses first name to identify
-    option.textContent = `${p.first} ${p.last}`; // shows full name
+    option.value = p.first;
+    option.textContent = `${p.first} ${p.last}`;
     select.appendChild(option);
   });
 
   countDisplay.textContent = participants.length;
 
-  // Show full names in kill chain
   let chainText = participants.map(p => `${p.first} ${p.last}`).join(" -> ");
   if (participants.length > 1) chainText += " -> " + `${participants[0].first} ${participants[0].last}`;
   chainDisplay.textContent = chainText;
 }
-
