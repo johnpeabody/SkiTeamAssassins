@@ -1,6 +1,5 @@
 let participants = [];
 
-// 📥 Load CSV from file input
 document.getElementById("file-input").addEventListener("change", handleFileUpload);
 
 function handleFileUpload(event) {
@@ -11,16 +10,17 @@ function handleFileUpload(event) {
   reader.onload = function(e) {
     const text = e.target.result;
 
-    if (text.includes("TargetEmail")) {
-      loadFromSavedCSV(text); // resume game
+    const header = text.trim().split("\n")[0];
+    if (header.includes("Target Email")) {
+      loadFromSavedCSV(text); // resume from saved
     } else {
-      loadFromRawCSV(text); // start new game
+      loadFromRawCSV(text); // new game from sign-up
     }
   };
   reader.readAsText(file);
 }
 
-// 🆕 Load raw CSV and assign kill chain
+// Load initial sign-up CSV
 function loadFromRawCSV(csvText) {
   const rows = csvText.trim().split("\n");
   const newParticipants = [];
@@ -28,15 +28,16 @@ function loadFromRawCSV(csvText) {
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i].split(",");
     newParticipants.push({
-      first: cols[1].trim(),         // First Name
-      last: cols[2].trim(),          // Last Name
-      email: cols[3].trim(),         // Email
-      phone: cols[4].trim(),         // Phone Number
+      timestamp: cols[0].trim(),
+      first: cols[1].trim(),
+      last: cols[2].trim(),
+      email: cols[3].trim(),
+      phone: cols[4].trim(),
       target: null
     });
   }
 
-  // Shuffle and assign targets
+  // Shuffle and assign kill targets
   for (let i = newParticipants.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [newParticipants[i], newParticipants[j]] = [newParticipants[j], newParticipants[i]];
@@ -49,31 +50,31 @@ function loadFromRawCSV(csvText) {
   updateUI();
 }
 
-// 🔁 Load saved state with assigned targets
+// Load from saved game CSV
 function loadFromSavedCSV(csvText) {
   const rows = csvText.trim().split("\n");
-  const tempParticipants = [];
+  const newParticipants = [];
 
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i].split(",");
-    const p = {
-      first: cols[0].trim(),          // First
-      last: cols[1].trim(),           // Last
-      email: cols[2].trim(),          // Email
-      phone: cols[3].trim(),          // Phone
-      target: cols[4].trim()          // TargetEmail
-    };
-    tempParticipants.push(p);
+    newParticipants.push({
+      timestamp: cols[0].trim(),
+      first: cols[1].trim(),
+      last: cols[2].trim(),
+      email: cols[3].trim(),
+      phone: cols[4].trim(),
+      target: cols[5].trim()
+    });
   }
 
-  participants = tempParticipants;
+  participants = newParticipants;
   updateUI();
 }
 
-// 🔪 Kill a participant by first name
+// Kill a participant
 function killParticipant() {
   const selectedName = document.getElementById("kill-select").value;
-  const victimIndex = participants.findIndex(p => p.first === selectedName);
+  const victimIndex = participants.findIndex(p => `${p.first} ${p.last}` === selectedName);
 
   if (victimIndex === -1) {
     alert("Participant not found.");
@@ -85,34 +86,33 @@ function killParticipant() {
   const assassin = participants[assassinIndex];
 
   assassin.target = victim.target;
-
   participants.splice(victimIndex, 1);
 
   if (participants.length === 1) {
-    alert(`${participants[0].first} is the winner!`);
+    alert(`${participants[0].first} ${participants[0].last} is the winner!`);
   }
 
   updateUI();
 }
 
-// 💾 Save current state as downloadable CSV
+// Download game state as CSV
 function downloadCSV() {
-  let csvContent = "data:text/csv;charset=utf-8,First,Last,Email,Phone,TargetEmail\n";
+  let csvContent = "data:text/csv;charset=utf-8,Timestamp,First Name,Last Name,Email,Phone Number,Target Email\n";
 
   participants.forEach(p => {
-    csvContent += `${p.first},${p.last},${p.email},${p.phone},${p.target}\n`;
+    csvContent += `${p.timestamp},${p.first},${p.last},${p.email},${p.phone},${p.target || ""}\n`;
   });
 
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "kill_chain_state.csv");
+  link.setAttribute("download", "updated_kill_chain.csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-// 🔁 UI Updates
+// UI Rendering
 function updateUI() {
   const select = document.getElementById("kill-select");
   const chainDisplay = document.getElementById("kill-chain");
@@ -121,7 +121,7 @@ function updateUI() {
   select.innerHTML = "";
   participants.forEach(p => {
     const option = document.createElement("option");
-    option.value = p.first;
+    option.value = `${p.first} ${p.last}`;
     option.textContent = `${p.first} ${p.last}`;
     select.appendChild(option);
   });
