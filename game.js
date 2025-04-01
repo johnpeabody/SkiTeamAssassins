@@ -44,6 +44,24 @@ function updateUI() {
   chainDisplay.textContent = chain;
 }
 
+function downloadCSV() {
+  let csvContent = "data:text/csv;charset=utf-8,First,Last,Target\n";
+
+  participants.forEach(p => {
+    const target = participants.find(t => t.first === p.target);
+    const targetName = target ? target.first + " " + target.last : "";
+    csvContent += `${p.first},${p.last},${targetName}\n`;
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "kill_chain_state.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 // Simulate a kill
 function killParticipant() {
   const selectedName = document.getElementById("kill-select").value;
