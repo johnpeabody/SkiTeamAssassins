@@ -13,13 +13,14 @@
   <select id="kill-select"></select>
   <button onclick="killParticipant()">Kill</button>
 
-  <h3>Kill Chain</h3>
-  <pre id="kill-chain"></pre>
+  <h3>Save Game</h3>
+  <button onclick="downloadCSV()">Download CSV</button>
 
-  <button onclick="downloadCSV()">Save Game to CSV</button>
-  <h3>Load Game from CSV</h3>
+  <h3>Load Game or Start New</h3>
   <input type="file" id="file-input" accept=".csv" />
 
+  <h3>Kill Chain</h3>
+  <pre id="kill-chain"></pre>
 
   <script src="game.js"></script>
 </body>
