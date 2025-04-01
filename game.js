@@ -1,7 +1,7 @@
 let participants = [];
 
 // 🕒 This matches the comment timestamp above
-const lastUpdated = "2025-04-01 320 PM";
+const lastUpdated = "2025-04-01 324 PM";
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("version-info").textContent = lastUpdated;
@@ -29,26 +29,34 @@ function handleFileUpload(event) {
 
 // Load initial sign-up CSV
 function loadFromRawCSV(csvText) {
-  const rows = csvText.trim().split("\n");
-  const headers = rows[0].split(",");
+  const rows = csvText.trim().split(/\r?\n/);
+  const headers = rows[0].split(",").map(h => h.trim());
+
   const tsIdx = headers.indexOf("Timestamp");
   const fnIdx = headers.indexOf("First Name");
   const lnIdx = headers.indexOf("Last Name");
   const emailIdx = headers.indexOf("Email");
   const phoneIdx = headers.indexOf("Phone Number");
 
+  if ([tsIdx, fnIdx, lnIdx, emailIdx, phoneIdx].includes(-1)) {
+    alert("❌ One or more required columns are missing. Make sure your headers are correct.");
+    console.error("Headers found:", headers);
+    return;
+  }
+
   const newParticipants = [];
 
   for (let i = 1; i < rows.length; i++) {
-    const cols = rows[i].split(",");
-    newParticipants.push({
-      timestamp: cols[tsIdx].trim(),
-      first: cols[fnIdx].trim(),
-      last: cols[lnIdx].trim(),
-      email: cols[emailIdx].trim(),
-      phone: cols[phoneIdx].trim(),
+    const cols = rows[i].split(",").map(c => c.trim());
+    const p = {
+      timestamp: cols[tsIdx],
+      first: cols[fnIdx],
+      last: cols[lnIdx],
+      email: cols[emailIdx],
+      phone: cols[phoneIdx],
       target: null
-    });
+    };
+    newParticipants.push(p);
   }
 
   // Shuffle and assign targets
@@ -61,8 +69,10 @@ function loadFromRawCSV(csvText) {
   }
 
   participants = newParticipants;
+  console.log("✅ Loaded participants:", participants);
   updateUI();
 }
+
 
 // Load saved CSV with target assignments
 function loadFromSavedCSV(csvText) {
