@@ -7,14 +7,14 @@ function handleFileUpload(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const text = e.target.result;
 
     const header = text.trim().split("\n")[0];
     if (header.includes("Target Email")) {
-      loadFromSavedCSV(text); // resume from saved
+      loadFromSavedCSV(text);
     } else {
-      loadFromRawCSV(text); // new game from sign-up
+      loadFromRawCSV(text);
     }
   };
   reader.readAsText(file);
@@ -23,21 +23,28 @@ function handleFileUpload(event) {
 // Load initial sign-up CSV
 function loadFromRawCSV(csvText) {
   const rows = csvText.trim().split("\n");
+  const headers = rows[0].split(",");
+  const tsIdx = headers.indexOf("Timestamp");
+  const fnIdx = headers.indexOf("First Name");
+  const lnIdx = headers.indexOf("Last Name");
+  const emailIdx = headers.indexOf("Email");
+  const phoneIdx = headers.indexOf("Phone Number");
+
   const newParticipants = [];
 
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i].split(",");
     newParticipants.push({
-      timestamp: cols[0].trim(),
-      first: cols[1].trim(),
-      last: cols[2].trim(),
-      email: cols[3].trim(),
-      phone: cols[4].trim(),
+      timestamp: cols[tsIdx].trim(),
+      first: cols[fnIdx].trim(),
+      last: cols[lnIdx].trim(),
+      email: cols[emailIdx].trim(),
+      phone: cols[phoneIdx].trim(),
       target: null
     });
   }
 
-  // Shuffle and assign kill targets
+  // Shuffle and assign targets
   for (let i = newParticipants.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [newParticipants[i], newParticipants[j]] = [newParticipants[j], newParticipants[i]];
@@ -50,20 +57,28 @@ function loadFromRawCSV(csvText) {
   updateUI();
 }
 
-// Load from saved game CSV
+// Load saved CSV with target assignments
 function loadFromSavedCSV(csvText) {
   const rows = csvText.trim().split("\n");
+  const headers = rows[0].split(",");
+  const tsIdx = headers.indexOf("Timestamp");
+  const fnIdx = headers.indexOf("First Name");
+  const lnIdx = headers.indexOf("Last Name");
+  const emailIdx = headers.indexOf("Email");
+  const phoneIdx = headers.indexOf("Phone Number");
+  const targetIdx = headers.indexOf("Target Email");
+
   const newParticipants = [];
 
   for (let i = 1; i < rows.length; i++) {
     const cols = rows[i].split(",");
     newParticipants.push({
-      timestamp: cols[0].trim(),
-      first: cols[1].trim(),
-      last: cols[2].trim(),
-      email: cols[3].trim(),
-      phone: cols[4].trim(),
-      target: cols[5].trim()
+      timestamp: cols[tsIdx].trim(),
+      first: cols[fnIdx].trim(),
+      last: cols[lnIdx].trim(),
+      email: cols[emailIdx].trim(),
+      phone: cols[phoneIdx].trim(),
+      target: cols[targetIdx].trim()
     });
   }
 
@@ -71,7 +86,7 @@ function loadFromSavedCSV(csvText) {
   updateUI();
 }
 
-// Kill a participant
+// Kill a participant by full name
 function killParticipant() {
   const selectedName = document.getElementById("kill-select").value;
   const victimIndex = participants.findIndex(p => `${p.first} ${p.last}` === selectedName);
@@ -95,7 +110,7 @@ function killParticipant() {
   updateUI();
 }
 
-// Download game state as CSV
+// Save the current game state to CSV
 function downloadCSV() {
   let csvContent = "data:text/csv;charset=utf-8,Timestamp,First Name,Last Name,Email,Phone Number,Target Email\n";
 
@@ -106,13 +121,13 @@ function downloadCSV() {
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "updated_kill_chain.csv");
+  link.setAttribute("download", "kill_chain_state.csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-// UI Rendering
+// Update UI
 function updateUI() {
   const select = document.getElementById("kill-select");
   const chainDisplay = document.getElementById("kill-chain");
@@ -129,6 +144,8 @@ function updateUI() {
   countDisplay.textContent = participants.length;
 
   let chainText = participants.map(p => `${p.first} ${p.last}`).join(" -> ");
-  if (participants.length > 1) chainText += " -> " + `${participants[0].first} ${participants[0].last}`;
+  if (participants.length > 1) {
+    chainText += " -> " + `${participants[0].first} ${participants[0].last}`;
+  }
   chainDisplay.textContent = chainText;
 }
